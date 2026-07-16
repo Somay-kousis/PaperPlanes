@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+*.local
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Data / artifacts
+*.pdf
+!tests/**/fixtures/*.pdf
+cockroach-data/
+.langgraph_api/
