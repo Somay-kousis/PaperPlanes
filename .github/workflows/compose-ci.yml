@@ -1,0 +1,36 @@
+name: compose-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start stack
+        run: docker compose up --build -d
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/healthz; then exit 0; fi
+            sleep 2
+          done
+          echo "backend never became healthy"
+          docker compose logs
+          exit 1
+      - name: Apply migrations
+        run: docker compose exec -T backend python -m app.scripts.init_db
+      - name: Echo message round-trip
+        run: |
+          SID=$(curl -fsS -X POST http://localhost:8000/api/sessions -H 'Content-Type: application/json' -d '{}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
+          curl -fsS -X POST "http://localhost:8000/api/sessions/$SID/messages" \
+            -H 'Content-Type: application/json' -d '{"content":"ci smoke"}' | tee /tmp/reply.json
+          grep -q "PaperPlanes received" /tmp/reply.json
+      - name: Frontend reachable
+        run: curl -fsS http://localhost:80/ | grep -qi paperplanes
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
