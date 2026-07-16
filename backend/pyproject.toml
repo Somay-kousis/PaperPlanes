@@ -1,0 +1,50 @@
+[project]
+name = "paperplanes-backend"
+version = "0.1.0"
+description = "PaperPlanes backend: research-companion agent with a CockroachDB-backed memory engine."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic-settings>=2.4",
+  "langgraph>=0.2",
+  "langchain-core>=0.3",
+  "langchain-aws>=0.2",
+  "langchain-cockroachdb>=0.3.0",
+  "sqlalchemy>=2.0",
+  "sqlalchemy-cockroachdb>=2.0",
+  "psycopg[binary]>=3.2",
+  "boto3>=1.34",
+  "httpx>=0.27",
+  "pymupdf4llm>=0.0.17",
+  "apscheduler>=3.10",
+  "python-multipart>=0.0.9",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "httpx>=0.27",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
