@@ -1,0 +1,37 @@
+{
+  "Comment": "Least-privilege replacement for AdministratorAccess on the mcp-cli-admin IAM user. This user's keys (~/.aws) are what local dev mounts into the backend container to call Bedrock + S3, so it needs exactly what the runtime needs — nothing more. Detach AdministratorAccess and attach this. Re-attach admin only temporarily for one-off infra changes (creating buckets, requesting model access), then remove it again.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeNovaAndTitanModels",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
+        "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0",
+        "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0",
+        "arn:aws:bedrock:us-east-1:380906049984:inference-profile/us.amazon.nova-pro-v1:0",
+        "arn:aws:bedrock:us-east-1:380906049984:inference-profile/us.amazon.nova-lite-v1:0"
+      ]
+    },
+    {
+      "Sid": "ReadWritePaperPdfObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::paperplanes-pdfs-380906049984/*"
+    },
+    {
+      "Sid": "ListPaperPdfBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::paperplanes-pdfs-380906049984"
+    }
+  ]
+}
