@@ -22,6 +22,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env.prod
+    # CockroachDB Cloud signs with its own CA, so verify-full needs the cluster's
+    # root cert. Download it once on the host (see docs/DEPLOY.md) before `up`:
+    #   curl --create-dirs -o deploy/cockroach-ca.crt \
+    #     "https://cockroachlabs.cloud/clusters/<CLUSTER_ID>/cert"
+    # and point DATABASE_URL at ...?sslmode=verify-full&sslrootcert=/certs/cockroach-ca.crt
+    volumes:
+      - ./deploy/cockroach-ca.crt:/certs/cockroach-ca.crt:ro
     expose:
       - "8000"
 

@@ -36,3 +36,6 @@ cockroach-data/
 # Internal submission prep — kept local, never pushed (judges shouldn't see strategy notes)
 docs/SUBMISSION.md
 docs/VIDEO.md
+
+# CockroachDB Cloud cluster CA cert (downloaded per-host, not committed)
+deploy/*.crt

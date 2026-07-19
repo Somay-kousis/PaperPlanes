@@ -71,6 +71,13 @@ nano .env.prod
 #   MCP_API_KEY=...   MCP_CLUSTER_ID=...
 #   APP_API_TOKEN=$(openssl rand -hex 32)   ← generate a strong one
 
+# 1b. Download the CockroachDB Cloud cluster CA cert (verify-full needs it — the
+#     cluster signs with its own CA, not a public one). Do this BEFORE any compose
+#     command, since the backend mounts deploy/cockroach-ca.crt.
+curl --create-dirs -o deploy/cockroach-ca.crt \
+  "https://cockroachlabs.cloud/clusters/<CLUSTER_ID>/cert"
+#     (<CLUSTER_ID> is your MCP_CLUSTER_ID / the id in the Cloud console URL)
+
 # 2. Apply the prod schema to CockroachDB Cloud (idempotent; safe to re-run)
 docker compose --env-file .env.prod --project-directory . \
   -f deploy/docker-compose.prod.yml run --rm backend python -m app.scripts.init_db
