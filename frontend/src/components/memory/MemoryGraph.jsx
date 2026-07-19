@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Network } from "lucide-react";
 
 export default function MemoryGraph({ note, onOpenNote }) {

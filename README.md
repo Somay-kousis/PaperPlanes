@@ -370,8 +370,8 @@ DATABASE_URL="postgresql://root@localhost:26257/defaultdb?sslmode=disable" \
 ```text
 backend/            FastAPI + LangGraph — app/memory (engine), app/core (graphs/nodes/models),
                     app/api (routes), app/scripts (init_db, seeds, benchmarks), tests/{unit,integration,eval}
-frontend/           React 19 + Vite — Chat, Library, Memory Inspector, Contradictions
-frontend-b2-wip-unrelated/  Swiss Brutalist landing page workspace (WIP)
+frontend/           React 19 + Vite (Swiss Brutalist UI) — Landing, Chat, Library,
+                    Memory Inspector (timeline/diff/graph/time-travel), Contradictions
 docs/               ARCHITECTURE · PRODUCTION (ECS path) · SECURITY (least-privilege IAM + API auth) · HACKATHON
 docker-compose.yml  single-node CockroachDB v25.2 + backend + frontend
 ```
