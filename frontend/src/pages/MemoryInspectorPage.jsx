@@ -24,65 +24,64 @@ const AUDIT_ACTIONS = ["", "add", "update", "invalidate", "archive", "read"];
 const POLL_INTERVAL_MS = 5000;
 const SEARCH_DEBOUNCE_MS = 300;
 
+const TABS = [
+  { key: "notes",       label: "Facts",        icon: Brain },
+  { key: "audit",       label: "Transactions", icon: History },
+  { key: "reflections", label: "Reflections",  icon: Sparkles },
+];
+
 export default function MemoryInspectorPage() {
-  const [activeTab, setActiveTab] = useState("notes"); // "notes" | "audit" | "reflections"
+  const [activeTab, setActiveTab] = useState("notes");
 
-  // Notes list state
-  const [statusFilter, setStatusFilter] = useState("active");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [asOfInput, setAsOfInput] = useState(""); // datetime-local raw value
-  const [notes, setNotes] = useState([]);
-  const [notesLoading, setNotesLoading] = useState(true);
-  const [notesError, setNotesError] = useState(null);
+  const [statusFilter, setStatusFilter]   = useState("active");
+  const [searchInput, setSearchInput]     = useState("");
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [asOfInput, setAsOfInput]         = useState("");
+  const [notes, setNotes]                 = useState([]);
+  const [notesLoading, setNotesLoading]   = useState(true);
+  const [notesError, setNotesError]       = useState(null);
 
-  // Audit feed state
   const [auditActionFilter, setAuditActionFilter] = useState("");
-  const [auditItems, setAuditItems] = useState([]);
+  const [auditItems, setAuditItems]   = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
-  const [auditError, setAuditError] = useState(null);
+  const [auditError, setAuditError]   = useState(null);
 
-  // Stats header
-  const [stats, setStats] = useState(null);
+  const [stats, setStats]               = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // Reflections tab state
-  const [reflections, setReflections] = useState([]);
+  const [reflections, setReflections]         = useState([]);
   const [reflectionsLoading, setReflectionsLoading] = useState(true);
-  const [reflectionsError, setReflectionsError] = useState(null);
-  const [reflectionRunning, setReflectionRunning] = useState(false);
+  const [reflectionsError, setReflectionsError]   = useState(null);
+  const [reflectionRunning, setReflectionRunning]  = useState(false);
   const [reflectionResultMsg, setReflectionResultMsg] = useState("");
   const [unavailableCiteIds, setUnavailableCiteIds] = useState(() => new Set());
 
-  // Detail panel
   const [selectedNoteId, setSelectedNoteId] = useState(null);
-  const [selectedNote, setSelectedNote] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(null);
+  const [selectedNote, setSelectedNote]     = useState(null);
+  const [detailLoading, setDetailLoading]   = useState(false);
+  const [detailError, setDetailError]       = useState(null);
 
   const asOfIso = asOfInput ? localInputToIso(asOfInput) : "";
 
-  // Debounce free-text search input -> committed query param.
   useEffect(() => {
-    const timer = setTimeout(() => setSearchQuery(searchInput.trim()), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setSearchQuery(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
   }, [searchInput]);
 
   const fetchNotes = useCallback(
-    async ({ silent = false } = {}) => {
+    async ({ silent = false, options = {} } = {}) => {
       if (!silent) setNotesLoading(true);
       try {
         const params = { q: searchQuery || undefined, limit: 50 };
-        if (asOfIso) {
-          params.as_of = asOfIso;
-        } else {
-          params.status = statusFilter;
-        }
-        const data = await getMemoryNotes(params);
+        if (asOfIso) params.as_of = asOfIso;
+        else params.status = statusFilter;
+        const data = await getMemoryNotes(params, options);
         setNotes(data);
         setNotesError(null);
       } catch (err) {
-        setNotesError(err);
+        if (err.name !== "AbortError") {
+          setNotesError(err);
+        }
       } finally {
         if (!silent) setNotesLoading(false);
       }
@@ -90,29 +89,28 @@ export default function MemoryInspectorPage() {
     [statusFilter, searchQuery, asOfIso],
   );
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (options = {}) => {
     try {
-      const data = await getMemoryStats();
+      const data = await getMemoryStats(options);
       setStats(data);
-    } catch {
-      // Stats are a nice-to-have header; don't surface a banner for this.
-    }
+    } catch {}
   }, []);
 
-  const fetchAudit = useCallback(async () => {
+  const fetchAudit = useCallback(async (options = {}) => {
     setAuditLoading(true);
     try {
-      const data = await getAudit({ action: auditActionFilter || undefined, limit: 100 });
+      const data = await getAudit({ action: auditActionFilter || undefined, limit: 100 }, options);
       setAuditItems(data);
       setAuditError(null);
     } catch (err) {
-      setAuditError(err);
+      if (err.name !== "AbortError") {
+        setAuditError(err);
+      }
     } finally {
       setAuditLoading(false);
     }
   }, [auditActionFilter]);
 
-  /** Returns true on success, false if the note couldn't be loaded. */
   const openNote = useCallback(async (id) => {
     if (!id) return false;
     setSelectedNoteId(id);
@@ -131,21 +129,21 @@ export default function MemoryInspectorPage() {
     }
   }, []);
 
-  const fetchReflections = useCallback(async () => {
+  const fetchReflections = useCallback(async (options = {}) => {
     setReflectionsLoading(true);
     try {
-      const data = await getReflections();
+      const data = await getReflections(options);
       setReflections(data);
       setReflectionsError(null);
     } catch (err) {
-      setReflectionsError(err);
+      if (err.name !== "AbortError") {
+        setReflectionsError(err);
+      }
     } finally {
       setReflectionsLoading(false);
     }
   }, []);
 
-  // Best-effort: open a note cited by a reflection. If it can't be loaded
-  // (archived away or deleted), grey the chip out for the rest of the session.
   const openCitedNote = useCallback(
     async (id) => {
       if (!id || unavailableCiteIds.has(id)) return;
@@ -163,256 +161,250 @@ export default function MemoryInspectorPage() {
       const created = result?.reflections_created ?? 0;
       const archived = result?.notes_archived ?? 0;
       setReflectionResultMsg(
-        `Created ${created} reflection${created === 1 ? "" : "s"}, archived ${archived} note${archived === 1 ? "" : "s"}.`,
+        `Consolidation complete: ${created} reflection${created === 1 ? "" : "s"} created, ${archived} note${archived === 1 ? "" : "s"} archived.`,
       );
       await Promise.all([fetchReflections(), fetchStats()]);
     } catch (err) {
-      setReflectionResultMsg(`Reflection run failed: ${err.message}`);
+      setReflectionResultMsg(`Reflection failed: ${err.message}`);
     } finally {
       setReflectionRunning(false);
     }
   }
 
-  // Refetch notes whenever filters change (shows the loading state).
   useEffect(() => {
-    fetchNotes();
+    const controller = new AbortController();
+    fetchNotes({ options: { signal: controller.signal } });
+    return () => { controller.abort(); };
   }, [fetchNotes]);
 
-  // Stats: fetch once on mount.
   useEffect(() => {
+    const controller = new AbortController();
     setStatsLoading(true);
-    fetchStats().finally(() => setStatsLoading(false));
+    fetchStats({ signal: controller.signal }).finally(() => {
+      if (!controller.signal.aborted) {
+        setStatsLoading(false);
+      }
+    });
+    return () => { controller.abort(); };
   }, [fetchStats]);
 
-  // Audit feed: fetch whenever the tab is active or its filter changes.
   useEffect(() => {
-    if (activeTab === "audit") fetchAudit();
+    if (activeTab !== "audit") return;
+    const controller = new AbortController();
+    fetchAudit({ signal: controller.signal });
+    return () => { controller.abort(); };
   }, [activeTab, fetchAudit]);
 
-  // Reflections: fetch whenever the tab becomes active.
   useEffect(() => {
-    if (activeTab === "reflections") fetchReflections();
+    if (activeTab !== "reflections") return;
+    const controller = new AbortController();
+    fetchReflections({ signal: controller.signal });
+    return () => { controller.abort(); };
   }, [activeTab, fetchReflections]);
 
-  // Live-update: poll the notes list + stats every 5s, but only while the
-  // tab is visible and we're not looking at a fixed point in the past.
   useEffect(() => {
-    if (asOfIso || activeTab !== "notes") return undefined;
+    if (asOfIso || activeTab !== "notes") return;
+    const controller = new AbortController();
+    let inFlight = false;
 
-    function tick() {
-      if (document.visibilityState === "visible") {
-        fetchNotes({ silent: true });
-        fetchStats();
+    async function tick() {
+      if (document.visibilityState !== "visible" || inFlight || controller.signal.aborted) return;
+      inFlight = true;
+      try {
+        await Promise.all([
+          fetchNotes({ silent: true, options: { signal: controller.signal } }),
+          fetchStats({ signal: controller.signal }),
+        ]);
+      } finally {
+        inFlight = false;
       }
     }
-
-    const intervalId = setInterval(tick, POLL_INTERVAL_MS);
+    const id = setInterval(tick, POLL_INTERVAL_MS);
     document.addEventListener("visibilitychange", tick);
     return () => {
-      clearInterval(intervalId);
+      clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
+      controller.abort();
     };
   }, [asOfIso, activeTab, fetchNotes, fetchStats]);
 
-  const listError =
-    activeTab === "notes" ? notesError : activeTab === "audit" ? auditError : reflectionsError;
-  const dismissListError =
-    activeTab === "notes"
-      ? () => setNotesError(null)
-      : activeTab === "audit"
-        ? () => setAuditError(null)
-        : () => setReflectionsError(null);
+  const listError = activeTab === "notes" ? notesError : activeTab === "audit" ? auditError : reflectionsError;
+  const dismissListError = activeTab === "notes"
+    ? () => setNotesError(null)
+    : activeTab === "audit"
+    ? () => setAuditError(null)
+    : () => setReflectionsError(null);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Memory Inspector</h1>
-          <p className="page-subtitle">
-            Browse every memory note PaperPlanes has stored, and audit how it changed over time.
-          </p>
-        </div>
-      </div>
+    <div className="inner-page">
+      <div className="brutalist-container">
 
-      <MemoryStatsHeader stats={stats} loading={statsLoading} />
-
-      <div className="flex-row reflection-toolbar">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleRunReflection}
-          disabled={reflectionRunning}
-        >
-          {reflectionRunning ? <Loader2 size={14} className="icon-spin" /> : <Sparkles size={14} />}
-          {reflectionRunning ? "Running…" : "Run reflection"}
-        </button>
-        {reflectionResultMsg && <span className="text-muted reflection-toolbar-msg">{reflectionResultMsg}</span>}
-      </div>
-
-      <TimeTravelBanner asOf={asOfIso} onClear={() => setAsOfInput("")} />
-
-      <div className="card filter-bar">
-        <div className="segmented" role="tablist" aria-label="Inspector view">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "notes"}
-            className={"segmented-btn" + (activeTab === "notes" ? " active" : "")}
-            onClick={() => setActiveTab("notes")}
-          >
-            <Brain size={13} /> Notes
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "audit"}
-            className={"segmented-btn" + (activeTab === "audit" ? " active" : "")}
-            onClick={() => setActiveTab("audit")}
-          >
-            <History size={13} /> Audit log
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "reflections"}
-            className={"segmented-btn" + (activeTab === "reflections" ? " active" : "")}
-            onClick={() => setActiveTab("reflections")}
-          >
-            <Sparkles size={13} /> Reflections
-          </button>
-        </div>
-
-        {activeTab === "notes" ? (
-          <div className="pill-toggle-group" role="group" aria-label="Status filter">
-            {STATUS_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={"pill-toggle" + (statusFilter === option ? " active" : "")}
-                disabled={Boolean(asOfIso)}
-                title={asOfIso ? "Status filter is ignored while time-traveling" : undefined}
-                onClick={() => setStatusFilter(option)}
-              >
-                {option}
-              </button>
-            ))}
+        {/* ── Page Header ──────────────────────────────────────────────── */}
+        <header className="page-header">
+          <div className="page-header-left">
+            <div className="page-counter">
+              <span className="page-counter-num">03 / Memory</span>
+            </div>
+            <h2 className="inner-h2">Memory Inspector</h2>
+            <p className="page-subtitle">
+              Explore the bi-temporal memory layer, trace updates, and trigger manual consolidations.
+            </p>
           </div>
-        ) : activeTab === "audit" ? (
-          <div className="pill-toggle-group" role="group" aria-label="Action filter">
-            {AUDIT_ACTIONS.map((option) => (
-              <button
-                key={option || "all"}
-                type="button"
-                className={"pill-toggle" + (auditActionFilter === option ? " active" : "")}
-                onClick={() => setAuditActionFilter(option)}
-              >
-                {option || "all"}
-              </button>
-            ))}
+          <div className="page-header-actions">
+            <button
+              type="button"
+              className="brutalist-btn brutalist-btn-primary brutalist-btn-sm"
+              onClick={handleRunReflection}
+              disabled={reflectionRunning}
+            >
+              {reflectionRunning ? <Loader2 size={12} className="icon-spin" /> : <Sparkles size={12} />}
+              {reflectionRunning ? "Consolidating…" : "Run Reflection"}
+            </button>
           </div>
-        ) : null}
+        </header>
 
-        <div className="filter-field search-field">
-          <label htmlFor="memory-search">
-            <Search size={11} /> Search
-          </label>
-          <input
-            id="memory-search"
-            className="input"
-            placeholder="Search note content…"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            disabled={activeTab !== "notes"}
-          />
-        </div>
+        {/* Stats row */}
+        <MemoryStatsHeader stats={stats} loading={statsLoading} />
 
-        <div className="filter-field">
-          <label htmlFor="asof-filter">As of</label>
-          <input
-            id="asof-filter"
-            type="datetime-local"
-            className="input"
-            value={asOfInput}
-            onChange={(event) => setAsOfInput(event.target.value)}
-            disabled={activeTab !== "notes"}
-          />
-        </div>
-      </div>
+        {/* Reflection result banner */}
+        {reflectionResultMsg && (
+          <div
+            style={{ padding: "9px 14px", border: "1px solid var(--accent-cobalt)", backgroundColor: "var(--accent-cobalt-light)", borderRadius: "5px", fontSize: "0.82rem", color: "var(--accent-cobalt)", marginBottom: "var(--space-sm)", fontFamily: "var(--font-mono)" }}
+          >
+            {reflectionResultMsg}
+          </div>
+        )}
 
-      {listError && (
-        <ErrorBanner title="Could not reach the backend" message={listError.message} onDismiss={dismissListError} />
-      )}
-      {detailError && (
-        <ErrorBanner
-          title="Could not load that note"
-          message={detailError.message}
-          onDismiss={() => setDetailError(null)}
-        />
-      )}
+        <TimeTravelBanner asOf={asOfIso} onClear={() => setAsOfInput("")} />
 
-      <div className="inspector-layout">
-        <div className="card notes-pane">
-          {activeTab === "notes" ? (
-            notesLoading ? (
-              <p className="text-muted pane-loading">Loading memories…</p>
-            ) : notes.length === 0 ? (
-              <EmptyState
-                icon={Brain}
-                title="No memories yet"
-                description="Chat with PaperPlanes about your papers and it will start remembering."
-              />
-            ) : (
-              <div className="notes-list">
-                {notes.map((note) => (
-                  <NoteRow
-                    key={note.id}
-                    note={note}
-                    selected={note.id === selectedNoteId}
-                    onClick={() => openNote(note.id)}
-                  />
-                ))}
-              </div>
-            )
-          ) : activeTab === "audit" ? (
-            auditLoading ? (
-              <p className="text-muted pane-loading">Loading audit log…</p>
-            ) : auditItems.length === 0 ? (
-              <EmptyState
-                icon={History}
-                title="No audit entries yet"
-                description="Every add, update, invalidate, archive, and read the agent performs on memory shows up here."
-              />
-            ) : (
-              <div className="audit-trail audit-trail-feed">
-                {auditItems.map((entry) => (
-                  <AuditRow key={entry.id} entry={entry} showTarget onOpenNote={openNote} />
-                ))}
-              </div>
-            )
-          ) : reflectionsLoading ? (
-            <p className="text-muted pane-loading">Loading reflections…</p>
-          ) : reflections.length === 0 ? (
-            <EmptyState
-              icon={Sparkles}
-              title="No reflections yet"
-              description="Click Run reflection, or let the background worker distill your memories over time."
-            />
-          ) : (
-            <div className="reflections-list">
-              {reflections.map((reflection) => (
-                <ReflectionCard
-                  key={reflection.id}
-                  reflection={reflection}
-                  unavailableCiteIds={unavailableCiteIds}
-                  onOpenCite={openCitedNote}
-                />
+        {listError && <ErrorBanner title="Connection Alert" message={listError.message} onDismiss={dismissListError} />}
+        {detailError && <ErrorBanner title="Detail Load Failed" message={detailError.message} onDismiss={() => setDetailError(null)} />}
+
+        {/* ── Tab Bar + Filter Bar ─────────────────────────────────────── */}
+        <div className="app-card" style={{ padding: "var(--space-sm)", marginBottom: "var(--space-md)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-md)", alignItems: "center" }}>
+
+            {/* Tab switcher */}
+            <div className="tab-bar" style={{ borderBottom: "none", gap: "0" }}>
+              {TABS.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`tab-btn${activeTab === key ? " active" : ""}`}
+                  onClick={() => setActiveTab(key)}
+                >
+                  <Icon size={13} /> {label}
+                </button>
               ))}
             </div>
-          )}
+
+            {/* Status/action filter pills */}
+            <div className="filter-pill-group">
+              {activeTab === "notes"
+                ? STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      className={`filter-pill${statusFilter === opt ? " active" : ""}`}
+                      disabled={Boolean(asOfIso)}
+                      onClick={() => setStatusFilter(opt)}
+                    >
+                      {opt}
+                    </button>
+                  ))
+                : activeTab === "audit"
+                ? AUDIT_ACTIONS.map((opt) => (
+                    <button
+                      key={opt || "all"}
+                      className={`filter-pill${auditActionFilter === opt ? " active" : ""}`}
+                      onClick={() => setAuditActionFilter(opt)}
+                    >
+                      {opt || "all"}
+                    </button>
+                  ))
+                : null}
+            </div>
+
+            {/* Search input */}
+            <div style={{ display: "flex", alignItems: "center", gap: "7px", border: "1px solid var(--border-ui)", borderRadius: "5px", padding: "5px 10px", backgroundColor: "var(--bg-card)" }}>
+              <Search size={13} style={{ color: "var(--fg-muted)", flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Search facts…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                disabled={activeTab !== "notes"}
+                style={{ border: "none", fontSize: "0.88rem", outline: "none", width: "140px", fontFamily: "var(--font-sans)", color: "var(--fg-navy)", background: "transparent" }}
+              />
+            </div>
+
+            {/* Time travel picker */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <label htmlFor="asof-field" className="mono-upper" style={{ color: "var(--fg-muted)", fontSize: "0.65rem" }}>As of</label>
+              <input
+                id="asof-field"
+                type="datetime-local"
+                value={asOfInput}
+                onChange={(e) => setAsOfInput(e.target.value)}
+                disabled={activeTab !== "notes"}
+                className="app-input"
+                style={{ width: "auto", fontSize: "0.82rem", padding: "5px 9px" }}
+              />
+            </div>
+
+          </div>
         </div>
 
-        <div className="card side-panel">
-          <NoteDetail note={selectedNote} loading={detailLoading} onOpenNote={openNote} />
+        {/* ── Main Split Layout ─────────────────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-md)", alignItems: "start" }}>
+
+          {/* Left: log list */}
+          <div className="app-card app-card-red" style={{ padding: "var(--space-sm)", height: "600px", overflowY: "auto" }}>
+            {activeTab === "notes" ? (
+              notesLoading ? (
+                <p className="text-muted" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <Loader2 size={12} className="icon-spin" /> Loading memory facts…
+                </p>
+              ) : notes.length === 0 ? (
+                <EmptyState icon={Brain} title="No facts recorded" description="Ask the agent questions in Chat to build semantic fact structures." />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+                  {notes.map((note) => (
+                    <NoteRow key={note.id} note={note} selected={note.id === selectedNoteId} onClick={() => openNote(note.id)} />
+                  ))}
+                </div>
+              )
+            ) : activeTab === "audit" ? (
+              auditLoading ? (
+                <p className="text-muted" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <Loader2 size={12} className="icon-spin" /> Loading transaction logs…
+                </p>
+              ) : auditItems.length === 0 ? (
+                <EmptyState icon={History} title="No transaction records" description="Audit trails log when facts are added, updated, read, or invalidated." />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {auditItems.map((entry) => <AuditRow key={entry.id} entry={entry} showTarget onOpenNote={openNote} />)}
+                </div>
+              )
+            ) : reflectionsLoading ? (
+              <p className="text-muted" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <Loader2 size={12} className="icon-spin" /> Loading consolidations…
+              </p>
+            ) : reflections.length === 0 ? (
+              <EmptyState icon={Sparkles} title="No reflections distilled" description="Click 'Run Reflection' or wait for the system to consolidate automatically." />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+                {reflections.map((r) => (
+                  <ReflectionCard key={r.id} reflection={r} unavailableCiteIds={unavailableCiteIds} onOpenCite={openCitedNote} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: detail + graph */}
+          <div className="app-card" style={{ padding: "var(--space-sm)", minHeight: "400px" }}>
+            <NoteDetail note={selectedNote} loading={detailLoading} onOpenNote={openNote} />
+          </div>
+
         </div>
       </div>
     </div>

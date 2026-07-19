@@ -6,11 +6,6 @@ function stringifyValue(value) {
   return String(value);
 }
 
-/**
- * Field-level diff between two flat snapshots (audit `details.before` /
- * `details.after`). Only changed fields are rendered; `content` gets its own
- * stacked before/after block since it's usually multi-line prose.
- */
 export default function MemoryDiffViewer({ before, after }) {
   if (!before || !after) return null;
 
@@ -21,25 +16,27 @@ export default function MemoryDiffViewer({ before, after }) {
   if (keys.length === 0) return null;
 
   return (
-    <div className="diff-list">
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "6px" }} className="mono">
       {keys.map((key) => {
         const oldValue = stringifyValue(before[key]);
         const newValue = stringifyValue(after[key]);
+        
         if (key === "content") {
           return (
-            <div className="diff-content-blocks" key={key}>
-              <div className="diff-field-name">content</div>
-              <div className="diff-block diff-block-old">{oldValue}</div>
-              <div className="diff-block diff-block-new">{newValue}</div>
+            <div key={key} style={{ display: "flex", flexDirection: "column", gap: "4px", borderLeft: "2px solid var(--border-ui)", paddingLeft: "8px", margin: "4px 0" }}>
+              <div className="mono text-muted" style={{ fontSize: "0.7rem" }}>content change:</div>
+              <div style={{ fontSize: "0.8rem", color: "var(--accent-red)", textDecoration: "line-through" }} className="serif">"{oldValue}"</div>
+              <div style={{ fontSize: "0.82rem", color: "var(--accent-green)" }} className="serif">"{newValue}"</div>
             </div>
           );
         }
+        
         return (
-          <div className="diff-field-row" key={key}>
-            <span className="diff-field-name">{key}</span>
-            <span className="diff-old">{oldValue}</span>
-            <span className="diff-arrow">→</span>
-            <span className="diff-new">{newValue}</span>
+          <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.72rem" }}>
+            <span className="text-muted" style={{ fontWeight: "bold" }}>{key}:</span>
+            <span style={{ color: "var(--accent-red)", textDecoration: "line-through" }}>{oldValue}</span>
+            <span className="text-muted">→</span>
+            <span style={{ color: "var(--accent-green)" }}>{newValue}</span>
           </div>
         );
       })}

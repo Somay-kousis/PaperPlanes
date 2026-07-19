@@ -14,7 +14,7 @@ export default function AuditTrail({ entries, showTarget = false, onOpenNote }) 
   }
 
   return (
-    <div className="audit-trail">
+    <div style={{ display: "flex", flexDirection: "column" }}>
       {entries.map((entry) => (
         <AuditRow key={entry.id} entry={entry} showTarget={showTarget} onOpenNote={onOpenNote} />
       ))}

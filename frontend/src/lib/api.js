@@ -1,8 +1,5 @@
 // ---------------------------------------------------------------------------
-// PaperPlanes API client
-//
-// Thin fetch wrapper around the backend, mounted behind /api by both the Vite
-// dev proxy (vite.config.js) and nginx in production (nginx.conf).
+// PaperPlanes API client for Swiss Brutalist workspace
 // ---------------------------------------------------------------------------
 
 const BASE_URL = "/api";
@@ -56,105 +53,62 @@ async function request(path, { method = "GET", body, headers, signal } = {}) {
 // Sessions / chat
 // ---------------------------------------------------------------------------
 
-/**
- * GET /api/sessions returns `{items: [...]}`; normalize to a bare array so
- * callers don't need to know about the wrapper.
- */
-export async function listSessions() {
-  const data = await request("/sessions");
+export async function listSessions(options = {}) {
+  const data = await request("/sessions", options);
   return Array.isArray(data) ? data : (data?.items ?? []);
 }
 
-export function createSession(payload = {}) {
-  return request("/sessions", { method: "POST", body: payload });
+export function createSession(payload = {}, options = {}) {
+  return request("/sessions", { method: "POST", body: payload, ...options });
 }
 
-export function getSession(sessionId) {
-  return request(`/sessions/${sessionId}`);
+export function getSession(sessionId, options = {}) {
+  return request(`/sessions/${sessionId}`, options);
 }
 
-export function listMessages(sessionId) {
-  return request(`/sessions/${sessionId}/messages`);
+export function listMessages(sessionId, options = {}) {
+  return request(`/sessions/${sessionId}/messages`, options);
 }
 
-/**
- * Send a message and await the full JSON response:
- * `{session_id, reply: {role, content, created_at, citations}, meta: {degraded, used_model, rag}}`.
- */
-export function sendMessage(sessionId, content) {
+export function sendMessage(sessionId, content, options = {}) {
   return request(`/sessions/${sessionId}/messages`, {
     method: "POST",
     body: { content },
+    ...options,
   });
-}
-
-/**
- * SSE-ready stub for streaming assistant replies.
- *
- * Once the backend exposes a streaming endpoint (e.g. text/event-stream at
- * `/sessions/{id}/messages/stream`), swap the implementation below for an
- * EventSource / fetch-stream reader. `onToken` is called with each partial
- * chunk, `onDone` with the final assembled message. Returns an unsubscribe
- * function so callers can cancel in-flight streams.
- */
-export function streamMessage(sessionId, content, { onToken, onDone, onError } = {}) {
-  let cancelled = false;
-
-  sendMessage(sessionId, content)
-    .then((response) => {
-      if (cancelled) return;
-      const reply = response?.reply ?? response;
-      onToken?.(reply?.content ?? "");
-      onDone?.(response);
-    })
-    .catch((error) => {
-      if (!cancelled) onError?.(error);
-    });
-
-  return () => {
-    cancelled = true;
-  };
 }
 
 // ---------------------------------------------------------------------------
 // Library / papers
 // ---------------------------------------------------------------------------
 
-/**
- * GET /api/papers returns `{items: [...]}`; normalize to a bare array.
- */
-export async function listPapers() {
-  const data = await request("/papers");
+export async function listPapers(options = {}) {
+  const data = await request("/papers", options);
   return Array.isArray(data) ? data : (data?.items ?? []);
 }
 
-export function uploadPaper(file) {
+export function uploadPaper(file, options = {}) {
   const form = new FormData();
   form.append("file", file);
-  return request("/papers", { method: "POST", body: form });
+  return request("/papers", { method: "POST", body: form, ...options });
 }
 
-/**
- * Add a paper from an arXiv ID or full arXiv URL — the backend accepts
- * either in the `arxiv_id` field.
- */
-export function addArxivPaper(idOrUrl) {
-  return request("/papers/arxiv", { method: "POST", body: { arxiv_id: idOrUrl } });
+export function addArxivPaper(idOrUrl, options = {}) {
+  return request("/papers/arxiv", { method: "POST", body: { arxiv_id: idOrUrl }, ...options });
 }
 
-export function getPaperStatus(paperId) {
-  return request(`/papers/${paperId}/status`);
+export function getPaperStatus(paperId, options = {}) {
+  return request(`/papers/${paperId}/status`, options);
 }
 
-export function deletePaper(paperId) {
-  return request(`/papers/${paperId}`, { method: "DELETE" });
+export function deletePaper(paperId, options = {}) {
+  return request(`/papers/${paperId}`, { method: "DELETE", ...options });
 }
 
 // ---------------------------------------------------------------------------
 // Memory inspector
 // ---------------------------------------------------------------------------
 
-/** Build a query string, skipping undefined/null/empty-string params. */
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -165,55 +119,38 @@ function buildQuery(params = {}) {
   return qs ? `?${qs}` : "";
 }
 
-/**
- * GET /api/memory/notes -> `{items: [...]}`; normalize to a bare array.
- * Supported params: status, as_of, q, limit.
- */
-export async function getMemoryNotes(params = {}) {
-  const data = await request(`/memory/notes${buildQuery(params)}`);
+export async function getMemoryNotes(params = {}, options = {}) {
+  const data = await request(`/memory/notes${buildQuery(params)}`, options);
   return Array.isArray(data) ? data : (data?.items ?? []);
 }
 
-/** GET /api/memory/notes/{id} -> `{...note, links: [...], audit: [...]}`. */
-export function getMemoryNote(id) {
-  return request(`/memory/notes/${id}`);
+export function getMemoryNote(id, options = {}) {
+  return request(`/memory/notes/${id}`, options);
 }
 
-/**
- * GET /api/memory/audit -> `{items: [...]}`; normalize to a bare array.
- * Supported params: target_id, action, since, limit.
- */
-export async function getAudit(params = {}) {
-  const data = await request(`/memory/audit${buildQuery(params)}`);
+export async function getAudit(params = {}, options = {}) {
+  const data = await request(`/memory/audit${buildQuery(params)}`, options);
   return Array.isArray(data) ? data : (data?.items ?? []);
 }
 
-/** GET /api/memory/stats -> `{notes: {...}, audit_last_24h: {...}, links}`. */
-export function getMemoryStats() {
-  return request("/memory/stats");
+export function getMemoryStats(options = {}) {
+  return request("/memory/stats", options);
 }
 
 // ---------------------------------------------------------------------------
 // Contradictions
 // ---------------------------------------------------------------------------
 
-/**
- * GET /api/contradictions -> `{items: [...]}`; normalize to a bare array.
- * Supported params: resolved, limit.
- */
-export async function getContradictions(params = {}) {
-  const data = await request(`/contradictions${buildQuery(params)}`);
+export async function getContradictions(params = {}, options = {}) {
+  const data = await request(`/contradictions${buildQuery(params)}`, options);
   return Array.isArray(data) ? data : (data?.items ?? []);
 }
 
-/**
- * POST /api/contradictions/{id}/resolve -> `{id, resolved:true, resolution_note}`.
- * `resolutionNote` is optional.
- */
-export function resolveContradiction(id, resolutionNote) {
+export function resolveContradiction(id, resolutionNote, options = {}) {
   return request(`/contradictions/${id}/resolve`, {
     method: "POST",
     body: resolutionNote ? { resolution_note: resolutionNote } : {},
+    ...options,
   });
 }
 
@@ -221,15 +158,13 @@ export function resolveContradiction(id, resolutionNote) {
 // Reflections
 // ---------------------------------------------------------------------------
 
-/** GET /api/reflections -> `{items: [...]}`; normalize to a bare array. */
-export async function getReflections() {
-  const data = await request("/reflections");
+export async function getReflections(options = {}) {
+  const data = await request("/reflections", options);
   return Array.isArray(data) ? data : (data?.items ?? []);
 }
 
-/** POST /api/reflections/run -> `{reflections_created, notes_archived, contradictions_found}`. */
-export function runReflection() {
-  return request("/reflections/run", { method: "POST" });
+export function runReflection(options = {}) {
+  return request("/reflections/run", { method: "POST", ...options });
 }
 
 export { ApiError };

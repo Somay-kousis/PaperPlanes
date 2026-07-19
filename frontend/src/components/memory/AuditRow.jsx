@@ -3,11 +3,11 @@ import MemoryDiffViewer from "./MemoryDiffViewer.jsx";
 import { formatRelativeTime } from "../../lib/format.js";
 
 const ACTION_CONFIG = {
-  add: { Icon: PlusCircle, tone: "success" },
-  update: { Icon: RefreshCw, tone: "info" },
-  invalidate: { Icon: XCircle, tone: "danger" },
-  archive: { Icon: Archive, tone: "warning" },
-  read: { Icon: Eye, tone: "neutral" },
+  add: { Icon: PlusCircle, color: "var(--accent-green)" },
+  update: { Icon: RefreshCw, color: "var(--accent-cobalt)" },
+  invalidate: { Icon: XCircle, color: "var(--accent-red)" },
+  archive: { Icon: Archive, color: "var(--accent-yellow)" },
+  read: { Icon: Eye, color: "#6c757d" },
 };
 
 const ACTOR_ICON = {
@@ -17,39 +17,66 @@ const ACTOR_ICON = {
   mcp: Plug,
 };
 
-/**
- * Single audit log entry. Reused both inside a note's own audit trail and in
- * the global audit feed tab (where `showTarget` reveals which note it hit).
- */
 export default function AuditRow({ entry, showTarget = false, onOpenNote }) {
-  const { Icon, tone } = ACTION_CONFIG[entry.action] ?? { Icon: RefreshCw, tone: "neutral" };
+  const { Icon, color } = ACTION_CONFIG[entry.action] ?? { Icon: RefreshCw, color: "var(--text-muted)" };
   const ActorIcon = ACTOR_ICON[entry.actor] ?? User;
   const before = entry.details?.before;
   const after = entry.details?.after;
 
   return (
-    <div className="audit-row">
-      <span className={`audit-icon audit-icon-${tone}`} aria-hidden="true">
-        <Icon size={13} strokeWidth={2} />
+    <div style={{ 
+      display: "flex", 
+      gap: "var(--space-xs)", 
+      padding: "10px 0", 
+      borderBottom: "1px solid var(--border-ui)",
+      alignItems: "flex-start"
+    }}>
+      <span style={{ 
+        display: "inline-flex", 
+        padding: "4px", 
+        borderRadius: "4px", 
+        backgroundColor: "var(--bg-cream)",
+        color: color,
+        flexShrink: 0
+      }}>
+        <Icon size={14} strokeWidth={2} />
       </span>
-      <div className="audit-row-main">
-        <div className="audit-row-top">
-          <span className="audit-row-action">{entry.action}</span>
-          <span className="audit-row-actor text-muted">
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+        <div className="mono" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", fontSize: "0.72rem" }}>
+          <span className="mono-upper" style={{ fontWeight: "bold", color: "var(--fg-navy)", fontSize: "0.65rem" }}>{entry.action}</span>
+          
+          <span className="text-muted" style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem" }}>
             <ActorIcon size={11} /> {entry.actor}
           </span>
+          
           {showTarget && entry.target_id && (
             <button
               type="button"
-              className="audit-target-link"
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "var(--accent-cobalt)",
+                textDecoration: "underline",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: "0.75rem"
+              }}
               onClick={() => onOpenNote?.(entry.target_id)}
             >
               note {String(entry.target_id).slice(0, 8)}
             </button>
           )}
-          <span className="audit-row-time text-muted">{formatRelativeTime(entry.created_at)}</span>
+
+          <span className="text-muted" style={{ marginLeft: "auto" }}>{formatRelativeTime(entry.created_at)}</span>
         </div>
-        {entry.reason && <div className="audit-row-reason text-muted">{entry.reason}</div>}
+
+        {entry.reason && (
+          <div className="serif text-muted" style={{ fontSize: "0.85rem", marginTop: "2px" }}>
+            Reason: {entry.reason}
+          </div>
+        )}
+
         {before && after && <MemoryDiffViewer before={before} after={after} />}
       </div>
     </div>

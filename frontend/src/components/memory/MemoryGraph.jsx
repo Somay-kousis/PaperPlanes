@@ -1,22 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Network } from "lucide-react";
 
-/**
- * Interactive visual Local Neighborhood Memory Graph.
- * Renders the active selected note at the center and orbiting linked satellite nodes.
- * Hovering shows a tooltip. Clicking a satellite re-centers it.
- */
 export default function MemoryGraph({ note, onOpenNote }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const [hoveredNode, setHoveredNode] = useState(null);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     let animationFrameId;
+    let currentHoveredNode = null;
 
     const resizeCanvas = () => {
       if (containerRef.current) {
@@ -33,15 +27,14 @@ export default function MemoryGraph({ note, onOpenNote }) {
     let connections = [];
 
     const getThemeColors = () => {
-      const style = getComputedStyle(document.documentElement);
       return {
-        accent: style.getPropertyValue("--accent").trim() || "#7c9cff",
-        danger: style.getPropertyValue("--danger").trim() || "#f87171",
-        info: style.getPropertyValue("--info").trim() || "#60c4ff",
-        textPrimary: style.getPropertyValue("--text-primary").trim() || "#e9ecf5",
-        textSecondary: style.getPropertyValue("--text-secondary").trim() || "#a4acc2",
-        bgSurface: style.getPropertyValue("--bg-surface-raised").trim() || "#191d27",
-        borderSubtle: style.getPropertyValue("--border-subtle").trim() || "#232837",
+        accent: "#0e46ec",      // Cobalt
+        danger: "#ff3b30",      // Red
+        info: "#ffd300",        // Yellow
+        textPrimary: "#101b3a", // Navy
+        textSecondary: "#6c757d",
+        bgSurface: "#faf8f2",   // Warm cream
+        borderSubtle: "#e0ddd4",// Warm border-ui
       };
     };
 
@@ -62,7 +55,7 @@ export default function MemoryGraph({ note, onOpenNote }) {
         y: height / 2,
         targetX: width / 2,
         targetY: height / 2,
-        radius: 32,
+        radius: 30,
         status: note.status,
         color: colors.accent,
         floatOffset: Math.random() * 100,
@@ -72,7 +65,7 @@ export default function MemoryGraph({ note, onOpenNote }) {
       // Satellite Nodes (linked notes)
       const links = note.links || [];
       const count = links.length;
-      const radius = 90; // orbit distance
+      const radius = 85; // orbit distance
 
       links.forEach((link, idx) => {
         const angle = (idx * 2 * Math.PI) / count + Math.PI / 4;
@@ -87,11 +80,11 @@ export default function MemoryGraph({ note, onOpenNote }) {
           y: height / 2 + Math.sin(angle) * radius,
           targetX: width / 2 + Math.cos(angle) * radius,
           targetY: height / 2 + Math.sin(angle) * radius,
-          radius: 20,
+          radius: 18,
           status: link.other?.status,
           relation: link.relation_type,
           direction: link.direction,
-          color: isContradiction ? colors.danger : colors.info,
+          color: isContradiction ? colors.danger : "#6c757d",
           floatOffset: Math.random() * 100 + (idx + 1) * 20,
         };
         newNodes.push(satNode);
@@ -122,13 +115,13 @@ export default function MemoryGraph({ note, onOpenNote }) {
       let foundHover = null;
       for (const node of nodes) {
         const dist = Math.hypot(node.x - mouseX, node.y - mouseY);
-        if (dist < node.radius + 10) {
+        if (dist < node.radius + 6) {
           foundHover = node;
           break;
         }
       }
-      if (foundHover !== hoveredNode) {
-        setHoveredNode(foundHover);
+      if (foundHover !== currentHoveredNode) {
+        currentHoveredNode = foundHover;
         canvas.style.cursor = foundHover ? "pointer" : "default";
       }
     };
@@ -136,13 +129,13 @@ export default function MemoryGraph({ note, onOpenNote }) {
     const handleMouseLeave = () => {
       mouseX = null;
       mouseY = null;
-      setHoveredNode(null);
+      currentHoveredNode = null;
       canvas.style.cursor = "default";
     };
 
     const handleMouseClick = () => {
-      if (hoveredNode && !hoveredNode.isCenter && hoveredNode.id) {
-        onOpenNote(hoveredNode.id);
+      if (currentHoveredNode && !currentHoveredNode.isCenter && currentHoveredNode.id) {
+        onOpenNote(currentHoveredNode.id);
       }
     };
 
@@ -150,17 +143,10 @@ export default function MemoryGraph({ note, onOpenNote }) {
     canvas.addEventListener("mouseleave", handleMouseLeave);
     canvas.addEventListener("click", handleMouseClick);
 
-    // Watch for theme modifications
-    const observer = new MutationObserver(() => {
-      colors = getThemeColors();
-      buildGraph();
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
-
     let time = 0;
 
     const render = () => {
-      time += 0.012;
+      time += 0.01;
       ctx.clearRect(0, 0, width, height);
 
       // Connection lines
@@ -168,8 +154,8 @@ export default function MemoryGraph({ note, onOpenNote }) {
         ctx.beginPath();
         ctx.moveTo(conn.from.x, conn.from.y);
         ctx.lineTo(conn.to.x, conn.to.y);
-        ctx.strokeStyle = conn.isContradiction ? `${colors.danger}60` : `${colors.borderSubtle}cc`;
-        ctx.lineWidth = conn.isContradiction ? 2.5 : 1.1;
+        ctx.strokeStyle = conn.isContradiction ? `${colors.danger}60` : `${colors.borderSubtle}bb`;
+        ctx.lineWidth = conn.isContradiction ? 2 : 1;
         ctx.stroke();
 
         // Relation label badge
@@ -183,9 +169,11 @@ export default function MemoryGraph({ note, onOpenNote }) {
 
         ctx.beginPath();
         const text = conn.relation;
-        ctx.font = "bold 8.5px var(--font-mono)";
+        ctx.font = "bold 8px monospace";
         const textWidth = ctx.measureText(text).width;
-        ctx.roundRect(-textWidth / 2 - 4, -6, textWidth + 8, 12, 3);
+        
+        // rounded rectangle
+        ctx.roundRect(-textWidth / 2 - 4, -5, textWidth + 8, 10, 2);
         ctx.fillStyle = colors.bgSurface;
         ctx.strokeStyle = conn.isContradiction ? colors.danger : colors.borderSubtle;
         ctx.lineWidth = 1;
@@ -202,59 +190,50 @@ export default function MemoryGraph({ note, onOpenNote }) {
       // Update orbits and draw nodes
       nodes.forEach((node) => {
         if (!node.isCenter) {
-          const driftRadius = 2.5;
+          const driftRadius = 2;
           node.x = node.targetX + Math.sin(time + node.floatOffset) * driftRadius;
-          node.y = node.targetY + Math.cos(time * 0.85 + node.floatOffset) * driftRadius;
+          node.y = node.targetY + Math.cos(time * 0.8 + node.floatOffset) * driftRadius;
         } else {
-          node.x = node.targetX + Math.sin(time * 0.8) * 0.6;
-          node.y = node.targetY + Math.cos(time * 0.4) * 0.6;
+          node.x = node.targetX + Math.sin(time * 0.8) * 0.4;
+          node.y = node.targetY + Math.cos(time * 0.4) * 0.4;
         }
 
-        const isHovered = hoveredNode && hoveredNode.id === node.id;
-        const scale = isHovered ? 1.12 : 1.0;
+        const isHovered = currentHoveredNode && currentHoveredNode.id === node.id;
+        const scale = isHovered ? 1.1 : 1.0;
         const currentRadius = node.radius * scale;
-
-        // Shadow radial glow
-        const glowGrd = ctx.createRadialGradient(node.x, node.y, currentRadius - 4, node.x, node.y, currentRadius + 10);
-        glowGrd.addColorStop(0, `${node.color}25`);
-        glowGrd.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = glowGrd;
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, currentRadius + 10, 0, Math.PI * 2);
-        ctx.fill();
 
         // Circle body
         ctx.beginPath();
         ctx.arc(node.x, node.y, currentRadius, 0, Math.PI * 2);
         ctx.fillStyle = colors.bgSurface;
         ctx.strokeStyle = isHovered ? colors.textPrimary : node.color;
-        ctx.lineWidth = isHovered ? 2.5 : 1.8;
+        ctx.lineWidth = isHovered ? 2 : 1.5;
         ctx.fill();
         ctx.stroke();
 
         // Core dot
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.isCenter ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, node.isCenter ? 4 : 3, 0, Math.PI * 2);
         ctx.fillStyle = node.color;
         ctx.fill();
 
         // Note labels
         ctx.fillStyle = colors.textPrimary;
         ctx.textAlign = "center";
-        ctx.font = node.isCenter ? "bold 10px var(--font-sans)" : "9px var(--font-sans)";
+        ctx.font = node.isCenter ? "bold 9px sans-serif" : "8px sans-serif";
         
-        const labelText = node.isCenter ? "Active Memory" : node.content.slice(0, 14) + "...";
-        ctx.fillText(labelText, node.x, node.y + currentRadius + 12);
+        const labelText = node.isCenter ? "Active Fact" : node.content.slice(0, 12) + "...";
+        ctx.fillText(labelText, node.x, node.y + currentRadius + 10);
       });
 
       // Tooltip overlays
-      if (hoveredNode) {
+      if (currentHoveredNode) {
         ctx.save();
-        const padding = 7;
-        const maxTooltipWidth = 190;
-        const text = hoveredNode.content;
+        const padding = 6;
+        const maxTooltipWidth = 180;
+        const text = currentHoveredNode.content;
         
-        ctx.font = "10.5px var(--font-sans)";
+        ctx.font = "10px sans-serif";
         const words = text.split(" ");
         let line = "";
         const lines = [];
@@ -270,24 +249,24 @@ export default function MemoryGraph({ note, onOpenNote }) {
         }
         lines.push(line);
 
-        const tooltipHeight = lines.length * 14 + padding * 2;
-        const tooltipX = Math.max(10, Math.min(width - maxTooltipWidth - 10, hoveredNode.x - maxTooltipWidth / 2));
-        const tooltipY = hoveredNode.y - hoveredNode.radius - tooltipHeight - 12 > 10 
-          ? hoveredNode.y - hoveredNode.radius - tooltipHeight - 6 
-          : hoveredNode.y + hoveredNode.radius + 6;
+        const tooltipHeight = lines.length * 13 + padding * 2;
+        const tooltipX = Math.max(10, Math.min(width - maxTooltipWidth - 10, currentHoveredNode.x - maxTooltipWidth / 2));
+        const tooltipY = currentHoveredNode.y - currentHoveredNode.radius - tooltipHeight - 10 > 10 
+          ? currentHoveredNode.y - currentHoveredNode.radius - tooltipHeight - 4 
+          : currentHoveredNode.y + currentHoveredNode.radius + 4;
 
         ctx.beginPath();
-        ctx.roundRect(tooltipX, tooltipY, maxTooltipWidth, tooltipHeight, 5);
-        ctx.fillStyle = "rgba(18, 21, 28, 0.95)";
-        ctx.strokeStyle = hoveredNode.color;
+        ctx.roundRect(tooltipX, tooltipY, maxTooltipWidth, tooltipHeight, 4);
+        ctx.fillStyle = "rgba(16, 27, 58, 0.95)";
+        ctx.strokeStyle = currentHoveredNode.color;
         ctx.lineWidth = 1;
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = colors.textPrimary;
+        ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         lines.forEach((l, index) => {
-          ctx.fillText(l.trim(), tooltipX + padding, tooltipY + padding + index * 14 + 10);
+          ctx.fillText(l.trim(), tooltipX + padding, tooltipY + padding + index * 13 + 8);
         });
         ctx.restore();
       }
@@ -312,21 +291,21 @@ export default function MemoryGraph({ note, onOpenNote }) {
       canvas.removeEventListener("mouseleave", handleMouseLeave);
       canvas.removeEventListener("click", handleMouseClick);
       window.removeEventListener("resize", handleResize);
-      observer.disconnect();
     };
-  }, [note, hoveredNode, onOpenNote]);
+  }, [note, onOpenNote]);
 
   return (
     <div
       ref={containerRef}
-      className="glass-panel"
       style={{
         width: "100%",
-        borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border-ui)",
+        borderRadius: "5px",
         overflow: "hidden",
         position: "relative",
-        marginBottom: "var(--space-4)",
-        boxShadow: "var(--shadow-sm)",
+        marginBottom: "var(--space-sm)",
+        backgroundColor: "var(--bg-cream)",
+        height: "240px"
       }}
     >
       <div
@@ -340,12 +319,11 @@ export default function MemoryGraph({ note, onOpenNote }) {
           zIndex: 10,
           fontSize: "11px",
           fontWeight: "600",
-          color: "var(--text-secondary)",
-          textTransform: "uppercase",
-          letterSpacing: "0.03em",
+          color: "var(--fg-muted)"
         }}
+        className="mono"
       >
-        <Network size={12} style={{ color: "var(--accent)" }} />
+        <Network size={12} style={{ color: "var(--accent-cobalt)" }} />
         Memory Neighborhood
       </div>
 
@@ -361,13 +339,13 @@ export default function MemoryGraph({ note, onOpenNote }) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "var(--space-4)",
+            padding: "var(--space-sm)",
             textAlign: "center",
-            pointerEvents: "none",
+            pointerEvents: "none"
           }}
         >
-          <div className="text-muted" style={{ fontSize: "12px" }}>
-            This memory stands alone. Link relationships will render as they are extracted.
+          <div className="mono text-muted" style={{ fontSize: "12px" }}>
+            This memory stands alone. No active links currently resolved.
           </div>
         </div>
       )}

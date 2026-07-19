@@ -17,11 +17,23 @@ function groupLinksByRelation(links) {
   return Array.from(groups.entries());
 }
 
+/* Shared section heading style for this panel */
+function SectionLabel({ children }) {
+  return (
+    <div
+      className="mono-upper text-muted"
+      style={{ fontSize: "0.65rem", letterSpacing: "0.1em", borderBottom: "1px solid var(--border-ui)", paddingBottom: "6px", marginBottom: "4px" }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function NoteDetail({ note, loading, onOpenNote }) {
   if (loading) {
     return (
-      <div className="side-panel-loading text-muted">
-        <Loader2 size={16} className="icon-spin" /> Loading note…
+      <div className="mono text-muted" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px", gap: "8px" }}>
+        <Loader2 size={15} className="icon-spin" /> Loading note properties…
       </div>
     );
   }
@@ -31,7 +43,7 @@ export default function NoteDetail({ note, loading, onOpenNote }) {
       <EmptyState
         icon={Brain}
         title="Select a note"
-        description="Choose a memory from the list to inspect its full content, timelines, links, and audit history."
+        description="Choose a memory from the list to inspect its content, timelines, links, and transactions."
       />
     );
   }
@@ -39,35 +51,42 @@ export default function NoteDetail({ note, loading, onOpenNote }) {
   const linkGroups = groupLinksByRelation(note.links);
 
   return (
-    <div className="note-detail">
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+
+      {/* 1. Neighborhood Graph Canvas */}
       <MemoryGraph note={note} onOpenNote={onOpenNote} />
 
-      <div className="note-detail-section">
-        <div className="note-detail-top">
+      {/* 2. Content */}
+      <div className="app-card" style={{ padding: "var(--space-sm)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-xs)" }}>
           <StatusBadge status={note.status} />
           <ProvenanceIcon isUserStated={note.is_user_stated} />
         </div>
-        <p className="note-detail-content">{note.content}</p>
+        <p className="serif" style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--fg-navy)", lineHeight: 1.55, margin: 0 }}>
+          {note.content}
+        </p>
       </div>
 
-      <div className="note-detail-section">
-        <div className="note-detail-label">Scores</div>
+      {/* 3. Decay & Relevance Metrics */}
+      <div className="app-card" style={{ padding: "var(--space-sm)", display: "flex", flexDirection: "column", gap: "10px" }}>
+        <SectionLabel>Decay &amp; Relevance Metrics</SectionLabel>
         <MeterBar label="Importance" value={note.importance} tone="accent" />
-        <MeterBar label="Strength" value={note.strength} tone="info" />
-        <MeterBar label="Confidence" value={note.confidence} tone="success" />
+        <MeterBar label="Strength"   value={note.strength}   tone="info" />
+        <MeterBar label="Confidence" value={note.confidence} tone="red" />
       </div>
 
-      <div className="note-detail-section">
-        <div className="note-detail-label">Timelines</div>
+      {/* 4. Bi-Temporal Lifetimes */}
+      <div className="app-card" style={{ padding: "var(--space-sm)", display: "flex", flexDirection: "column", gap: "10px" }}>
+        <SectionLabel>Bi-Temporal Lifetimes</SectionLabel>
         <TimelineRow
-          label="Event time"
+          label="Event Time (Valid Range)"
           startLabel="valid"
           startIso={note.valid_at}
           endLabel="invalid"
           endIso={note.invalid_at}
         />
         <TimelineRow
-          label="System time"
+          label="Transaction Time (System Range)"
           startLabel="created"
           startIso={note.created_at}
           endLabel="expired"
@@ -75,17 +94,39 @@ export default function NoteDetail({ note, loading, onOpenNote }) {
         />
       </div>
 
+      {/* 5. Keywords & Tags */}
       {(note.keywords?.length > 0 || note.tags?.length > 0) && (
-        <div className="note-detail-section">
-          <div className="note-detail-label">Keywords &amp; tags</div>
-          <div className="note-row-tags">
+        <div className="app-card" style={{ padding: "var(--space-sm)", display: "flex", flexDirection: "column", gap: "8px" }}>
+          <SectionLabel>Keywords &amp; Tags</SectionLabel>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {note.keywords?.map((keyword) => (
-              <span className="tag-chip tag-chip-keyword" key={`kw-${keyword}`}>
+              <span
+                key={`kw-${keyword}`}
+                className="mono"
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "2px 8px",
+                  border: "1px solid var(--accent-yellow)",
+                  borderRadius: "100px",
+                  backgroundColor: "var(--accent-yellow-light)",
+                  color: "#8a6c00",
+                }}
+              >
                 {keyword}
               </span>
             ))}
             {note.tags?.map((tag) => (
-              <span className="tag-chip" key={`tag-${tag}`}>
+              <span
+                key={`tag-${tag}`}
+                className="mono text-muted"
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "2px 8px",
+                  border: "1px solid var(--border-ui)",
+                  borderRadius: "100px",
+                  backgroundColor: "var(--bg-cream)",
+                }}
+              >
                 {tag}
               </span>
             ))}
@@ -93,63 +134,116 @@ export default function NoteDetail({ note, loading, onOpenNote }) {
         </div>
       )}
 
+      {/* 6. Derived Chain */}
       {note.derived_from?.length > 0 && (
-        <div className="note-detail-section">
-          <div className="note-detail-label">Derived from</div>
-          <div className="derived-chain">
+        <div className="app-card" style={{ padding: "var(--space-sm)", display: "flex", flexDirection: "column", gap: "8px" }}>
+          <SectionLabel>Derived Chain Dependencies</SectionLabel>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {note.derived_from.map((id) => (
               <button
                 type="button"
                 key={id}
-                className="derived-chain-item"
+                className="mono"
+                style={{
+                  padding: "3px 9px",
+                  border: "1px solid var(--border-ui)",
+                  borderRadius: "100px",
+                  backgroundColor: "var(--accent-cobalt-light)",
+                  color: "var(--accent-cobalt)",
+                  cursor: "pointer",
+                  fontSize: "0.7rem",
+                }}
                 onClick={() => onOpenNote?.(id)}
               >
-                {String(id).slice(0, 8)}
+                note {String(id).slice(0, 8)}
               </button>
             ))}
           </div>
         </div>
       )}
 
+      {/* 7. Relation Link Traversals */}
       {linkGroups.length > 0 && (
-        <div className="note-detail-section">
-          <div className="note-detail-label">Links</div>
-          {linkGroups.map(([relation, links]) => (
-            <div className="link-group" key={relation} style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-              <div className={"link-group-title" + (relation === "contradicts" ? " link-group-title-danger" : "")} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                {relation === "contradicts" && <AlertTriangle size={12} />}
-                <span style={{ textTransform: "capitalize", fontWeight: "600" }}>{relation}</span> ({links.length})
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+          {linkGroups.map(([relation, links]) => {
+            const isContradiction = relation === "contradicts";
+            return (
+              <div
+                key={relation}
+                className={`app-card${isContradiction ? " app-card-red" : ""}`}
+                style={{
+                  padding: "var(--space-sm)",
+                  backgroundColor: isContradiction ? "var(--accent-red-light)" : "var(--bg-card)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  className="mono-upper"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.1em",
+                    color: isContradiction ? "var(--accent-red)" : "var(--fg-muted)",
+                  }}
+                >
+                  {isContradiction && <AlertTriangle size={11} />}
+                  {relation} ({links.length})
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {links.map((link) => (
+                    <button
+                      type="button"
+                      key={link.id}
+                      style={{
+                        padding: "var(--space-xs)",
+                        border: "1px solid var(--border-ui)",
+                        borderRadius: "5px",
+                        backgroundColor: "var(--bg-card)",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                        width: "100%",
+                        transition: "box-shadow 0.15s ease",
+                      }}
+                      onClick={() => onOpenNote?.(link.other?.id)}
+                    >
+                      <div
+                        className="mono-upper text-muted"
+                        style={{ fontSize: "0.62rem", color: isContradiction ? "var(--accent-red)" : undefined }}
+                      >
+                        {relation} · {link.direction}
+                      </div>
+                      <div className="serif" style={{ fontSize: "0.93rem", color: "var(--fg-navy)", lineHeight: 1.4 }}>
+                        "{link.other?.content}"
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px", width: "100%" }}>
+                        <span className="mono text-muted" style={{ fontSize: "0.7rem" }}>
+                          Confidence: {Math.round((link.other?.confidence ?? 0.8) * 100)}%
+                        </span>
+                        <StatusBadge status={link.other?.status} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-2)" }}>
-                {links.map((link) => (
-                  <button
-                    type="button"
-                    key={link.id}
-                    className="traverse-link-card"
-                    onClick={() => onOpenNote?.(link.other?.id)}
-                  >
-                    <div className={`traverse-link-relation ${relation === "contradicts" ? "relation-contradicts" : ""}`}>
-                      {relation} &middot; {link.direction}
-                    </div>
-                    <div className="traverse-link-content">
-                      {link.other?.content}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
-                      <span className="text-muted" style={{ fontSize: "10px" }}>Confidence: {Math.round((link.other?.confidence ?? 0.8) * 100)}%</span>
-                      <StatusBadge status={link.other?.status} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      <div className="note-detail-section">
-        <div className="note-detail-label">Audit trail</div>
-        <AuditTrail entries={note.audit} />
+      {/* 8. Audit Trail */}
+      <div className="app-card" style={{ padding: "var(--space-sm)", display: "flex", flexDirection: "column" }}>
+        <SectionLabel>Audit Trail Log ({note.audit?.length ?? 0})</SectionLabel>
+        <AuditTrail entries={note.audit} onOpenNote={onOpenNote} />
       </div>
+
     </div>
   );
 }

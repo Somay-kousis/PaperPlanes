@@ -1,43 +1,62 @@
 import { CheckCircle2, Archive, XCircle, Link2 } from "lucide-react";
-import use3dTilt from "../../lib/use3dTilt.js";
 
 const TILES = [
-  { key: "active", label: "Active notes", Icon: CheckCircle2, tone: "success" },
-  { key: "archived", label: "Archived", Icon: Archive, tone: "neutral" },
-  { key: "invalidated", label: "Invalidated", Icon: XCircle, tone: "danger" },
-  { key: "links", label: "Links", Icon: Link2, tone: "info" },
+  { key: "active", label: "Active Facts", Icon: CheckCircle2, color: "var(--accent-cobalt)" },
+  { key: "archived", label: "Archived Facts", Icon: Archive, color: "#6c757d" },
+  { key: "invalidated", label: "Invalidated Facts", Icon: XCircle, color: "var(--accent-red)" },
+  { key: "links", label: "Semantic Links", Icon: Link2, color: "#a4acc2" },
 ];
 
 export default function MemoryStatsHeader({ stats, loading }) {
   const notes = stats?.notes ?? {};
   const values = { ...notes, links: stats?.links ?? 0 };
   const last24h = stats?.audit_last_24h ?? {};
-  const cardTilt = use3dTilt(6, 1.025);
 
   return (
-    <div className="stats-header">
-      <div className="stat-tiles">
-        {TILES.map(({ key, label, Icon, tone }) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "var(--space-md)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-sm)" }}>
+        {TILES.map(({ key, label, Icon, color }) => (
           <div
-            className={`stat-tile stat-card-glowing stat-tile-${tone}`}
             key={key}
-            onMouseMove={cardTilt.onMouseMove}
-            onMouseLeave={cardTilt.onMouseLeave}
-            onMouseEnter={cardTilt.onMouseEnter}
+            className="app-card"
+            style={{
+              padding: "var(--space-sm)",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-sm)"
+            }}
           >
-            <span className="stat-tile-icon" aria-hidden="true">
-              <Icon size={15} strokeWidth={2} />
+            <span style={{ 
+              display: "inline-flex", 
+              padding: "8px", 
+              borderRadius: "50%", 
+              backgroundColor: "var(--bg-cream)",
+              color: color,
+              flexShrink: 0
+            }}>
+              <Icon size={18} strokeWidth={2} />
             </span>
             <div>
-              <div className="stat-tile-value">{loading ? "—" : (values[key] ?? 0)}</div>
-              <div className="stat-tile-label">{label}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--fg-navy)", lineHeight: 1.1 }}>
+                {loading ? "—" : (values[key] ?? 0)}
+              </div>
+              <div className="mono text-muted" style={{ marginTop: "2px" }}>
+                {label}
+              </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="stats-subline text-muted">
-        Last 24h — {last24h.add ?? 0} added · {last24h.update ?? 0} updated ·{" "}
-        {last24h.invalidate ?? 0} invalidated · {last24h.read ?? 0} reads
+      
+      <div className="mono text-muted" style={{ display: "flex", gap: "6px" }}>
+        <span>Last 24h:</span>
+        <span>{last24h.add ?? 0} added</span>
+        <span>·</span>
+        <span>{last24h.update ?? 0} updated</span>
+        <span>·</span>
+        <span>{last24h.invalidate ?? 0} invalidated</span>
+        <span>·</span>
+        <span>{last24h.read ?? 0} reads</span>
       </div>
     </div>
   );

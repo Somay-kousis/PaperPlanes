@@ -1,7 +1,3 @@
-// ---------------------------------------------------------------------------
-// Small formatting helpers shared by the memory inspector + chat UI.
-// ---------------------------------------------------------------------------
-
 const RELATIVE_UNITS = [
   { limit: 60, divisor: 1, unit: "s" },
   { limit: 3600, divisor: 60, unit: "m" },
@@ -10,7 +6,6 @@ const RELATIVE_UNITS = [
   { limit: 31536000, divisor: 2592000, unit: "mo" },
 ];
 
-/** "3m ago" / "2h ago" / "just now"; falls back to a locale date for old timestamps. */
 export function formatRelativeTime(iso) {
   if (!iso) return "";
   const date = new Date(iso);
@@ -40,7 +35,6 @@ export function formatDateTime(iso) {
   });
 }
 
-/** Convert a `datetime-local` input value into an ISO string (UTC-normalized by the Date constructor). */
 export function localInputToIso(value) {
   if (!value) return "";
   const date = new Date(value);
