@@ -379,6 +379,7 @@ docker-compose.yml  single-node CockroachDB v25.2 + backend + frontend
 
 ## Docs
 
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — **start here** to learn the repo: which papers to read, the tech stack, and a follow-the-data reading order through the code
 - `docs/ARCHITECTURE.md` — memory engine design
 - `docs/PRODUCTION.md` — productionization path (ECS Fargate)
 - `docs/SECURITY.md` — least-privilege IAM, secrets handling, API auth
