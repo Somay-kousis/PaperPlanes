@@ -1,0 +1,12 @@
+# Caddy edge for PaperPlanes.
+#
+# Caddy fetches and renews a Let's Encrypt certificate for $DOMAIN automatically
+# (ports 80 + 443 must be open to the internet in the EC2 security group).
+#
+# The frontend container's nginx already serves the SPA and reverse-proxies
+# /api/ to the backend, so Caddy only needs to hand everything to frontend:80.
+
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy frontend:80
+}

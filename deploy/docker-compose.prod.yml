@@ -1,0 +1,53 @@
+# Production compose — single EC2 host, CockroachDB Cloud as the memory layer.
+#
+# Differences from the root docker-compose.yml (local dev):
+#   - NO bundled cockroach node: DATABASE_URL points at CockroachDB Cloud.
+#   - NO ~/.aws mount: the backend reads AWS creds from the EC2 instance profile
+#     (IMDSv2) — no long-lived keys on the box.
+#   - Caddy sits in front of the frontend and terminates TLS with automatic
+#     Let's Encrypt certificates for ${DOMAIN}.
+#
+# Run from the REPO ROOT. `--project-directory .` is REQUIRED so the relative
+# paths below (./backend, ./frontend, .env.prod, ./deploy/Caddyfile) resolve
+# against the repo root and not against this file's deploy/ directory:
+#   docker compose --env-file .env.prod --project-directory . \
+#     -f deploy/docker-compose.prod.yml up -d --build
+#
+# --env-file .env.prod does double duty: it supplies the backend's runtime env
+# AND the ${DOMAIN} substitution below.
+
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    expose:
+      - "8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod, e.g. paperplanes.duckdns.org}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  caddy-data:
+  caddy-config:

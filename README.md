@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/LangGraph-Stateful%20Agents-orange.svg" alt="LangGraph" />
   <img src="https://img.shields.io/badge/CockroachDB-VECTOR%20%2B%20MCP%20%2B%20Bi--temporal-6933FF.svg" alt="CockroachDB" />
   <img src="https://img.shields.io/badge/AWS-Bedrock%20Nova%20%2B%20Titan%20%2B%20S3-FF9900.svg" alt="AWS" />
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" />
+  <img src="https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-green.svg" alt="License" />
 </p>
 
 <p align="center">
@@ -387,4 +387,9 @@ docker-compose.yml  single-node CockroachDB v25.2 + backend + frontend
 
 ## License
 
-MIT
+Dual-licensed, at your option, under either:
+
+- **MIT** — see [`LICENSE-MIT`](LICENSE-MIT)
+- **Apache License, Version 2.0** — see [`LICENSE-APACHE`](LICENSE-APACHE)
+
+`SPDX-License-Identifier: MIT OR Apache-2.0`

@@ -18,6 +18,8 @@ dist/
 .env
 .env.*
 !.env.example
+!*.env.example
+!deploy/.env.prod.example
 *.pem
 
 # OS / editors
@@ -30,3 +32,7 @@ dist/
 !tests/**/fixtures/*.pdf
 cockroach-data/
 .langgraph_api/
+
+# Internal submission prep — kept local, never pushed (judges shouldn't see strategy notes)
+docs/SUBMISSION.md
+docs/VIDEO.md
