@@ -35,6 +35,12 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
+    # nginx attaches this as the bearer token when proxying /api to the backend.
+    # The SPA is a static bundle and cannot hold a secret, so the token stays
+    # server-side here rather than being baked into the JS. Rotating it is an
+    # .env.prod edit + `up -d` (no rebuild needed).
+    environment:
+      APP_API_TOKEN: ${APP_API_TOKEN:?set APP_API_TOKEN in .env.prod (openssl rand -hex 32)}
     expose:
       - "80"
     depends_on:

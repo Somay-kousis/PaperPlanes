@@ -33,6 +33,10 @@ services:
 
   frontend:
     build: ./frontend
+    # Optional locally: with APP_API_TOKEN unset the backend leaves the routes
+    # ungated and nginx forwards an empty bearer, which it ignores.
+    environment:
+      APP_API_TOKEN: ${APP_API_TOKEN:-}
     ports:
       - "80:80"
     depends_on:

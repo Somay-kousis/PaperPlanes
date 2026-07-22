@@ -113,9 +113,22 @@ and load balancers don't need the token. The check is constant-time and, when th
 token is unset, a no-op (so local dev, CI, and the eval suite run open).
 
 **A deployment MUST set `APP_API_TOKEN`** to a strong random value
-(`openssl rand -hex 32`) and have the frontend send it as
-`Authorization: Bearer <token>`. This closes the "unauthenticated, anyone can
-reach the memory layer" hole.
+(`openssl rand -hex 32`). The React SPA is a static bundle with nowhere to keep a
+secret, so it does *not* hold the token: the frontend's nginx attaches
+`Authorization: Bearer <token>` server-side when proxying `/api` to the backend
+(`frontend/nginx.conf.template`). The token never reaches the browser and rotates
+with a restart rather than a rebuild.
+
+**Be explicit about what that does and does not buy.** It closes direct
+unauthenticated access to the backend — the container publishes no ports, so the
+proxy is the only path in — but it does *not* authenticate end users. Anyone who
+can reach the public demo can drive the API through that proxy, by design: the
+hosted demo is meant to be clicked through without handing out a credential. The
+mitigations that actually apply there are nginx rate limits (5 r/s reads, 10 r/min
+writes per IP, `limit_req_status 429`) to bound Bedrock spend and abuse.
+
+A deployment carrying real user data needs genuine per-user authentication
+(OIDC/session) in front of this, not a shared token.
 
 Known limitation: `user_id` is still taken from the request rather than derived
 from the authenticated identity, so this is single-tenant access control (the one

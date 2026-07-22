@@ -105,9 +105,16 @@ docker compose --env-file .env.prod --project-directory . -f deploy/docker-compo
 # HTTPS + cert (from your laptop, after DNS propagates — usually < 1 min)
 curl -sfI https://paperplanes.duckdns.org/ | head -1
 
-# auth is enforced in prod: a data route without the token should 401
+# the backend enforces the bearer token; the frontend's nginx attaches it when
+# proxying /api, so a browser (and this curl, which goes through the same proxy)
+# gets 200 without holding a credential:
 curl -s -o /dev/null -w '%{http_code}\n' https://paperplanes.duckdns.org/api/memory/notes
-#   → 401  (add  -H "Authorization: Bearer $APP_API_TOKEN"  → 200)
+#   → 200
+
+# to see the gate itself, bypass the proxy and hit the backend directly:
+docker compose --env-file .env.prod --project-directory . -f deploy/docker-compose.prod.yml \
+  exec caddy wget -qO- --server-response http://backend:8000/api/memory/notes 2>&1 | head -1
+#   → 401 Unauthorized
 ```
 
 Then open `https://paperplanes.duckdns.org/` — the landing page, and upload an arXiv id
