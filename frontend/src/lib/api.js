@@ -13,6 +13,34 @@ class ApiError extends Error {
   }
 }
 
+// FastAPI's `detail` is a plain string for HTTPException but an array of
+// {loc, msg, type} objects for 422 validation errors. Interpolating that
+// straight into a banner renders "[object Object]", which tells the user
+// nothing, so flatten the structured form into something readable.
+function errorMessage(payload, status) {
+  const fallback = `Request failed with status ${status}`;
+  if (!payload || typeof payload !== "object") return fallback;
+
+  const { detail } = payload;
+  if (typeof detail === "string" && detail) return detail;
+
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (!item || typeof item !== "object") return null;
+        // Drop the leading "body"/"query" scope marker -- the field name is
+        // the useful part.
+        const field = Array.isArray(item.loc) ? item.loc.slice(1).join(".") : "";
+        return field && item.msg ? `${field}: ${item.msg}` : (item.msg ?? null);
+      })
+      .filter(Boolean);
+    if (parts.length) return parts.join("; ");
+  }
+
+  return payload.message || fallback;
+}
+
 async function request(path, { method = "GET", body, headers, signal } = {}) {
   let response;
   try {
@@ -40,10 +68,10 @@ async function request(path, { method = "GET", body, headers, signal } = {}) {
     : await response.text().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && (payload.detail || payload.message)) ||
-      `Request failed with status ${response.status}`;
-    throw new ApiError(message, { status: response.status, body: payload });
+    throw new ApiError(errorMessage(payload, response.status), {
+      status: response.status,
+      body: payload,
+    });
   }
 
   return payload;

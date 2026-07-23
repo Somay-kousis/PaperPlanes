@@ -27,6 +27,7 @@ from fastapi import APIRouter, HTTPException
 from langchain_core.messages import AIMessage, HumanMessage
 
 from app.api.schema.chat import (
+    DEMO_USER_ID,
     ChatReply,
     ChatReplyMeta,
     Citation,
@@ -95,8 +96,15 @@ async def create_session(payload: SessionCreate) -> SessionOut:
 
 
 @router.get("", response_model=SessionListOut)
-async def list_sessions(user_id: str) -> SessionListOut:
-    """List sessions belonging to a user, most recently active first."""
+async def list_sessions(user_id: str = DEMO_USER_ID) -> SessionListOut:
+    """List sessions belonging to a user, most recently active first.
+
+    ``user_id`` defaults to the demo user to match ``SessionCreate``/
+    ``MessageCreate`` and the other routers (which call ``ensure_demo_user()``
+    and take no user param at all). Without the default this was the only
+    endpoint on the chat page requiring a query arg, so the frontend's
+    parameterless ``listSessions()`` got a 422.
+    """
     try:
         user_uuid = resolve_user_id(user_id)
         records = await sessions_repo.list_sessions(user_uuid)
