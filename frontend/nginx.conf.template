@@ -1,0 +1,67 @@
+# Rendered at container start by the nginx image entrypoint, which runs envsubst
+# over /etc/nginx/templates/*.template. Only ${APP_API_TOKEN} is substituted
+# (NGINX_ENVSUBST_FILTER in the Dockerfile), so nginx's own $variables survive.
+
+# --- Rate limiting ---------------------------------------------------------
+# The demo is reachable by anyone with the URL, and chat/ingestion both call
+# Bedrock, so an unthrottled endpoint spends real credits. Two tiers:
+#   api_read  - every /api/ request; generous enough that clicking around the
+#               SPA (which fans out several calls per page, plus ingestion
+#               status polling) never trips it.
+#   api_write - POSTs only. The key is empty for other methods and nginx skips
+#               empty keys, so GETs are never counted against this zone.
+map $request_method $write_limit_key {
+    POST    $binary_remote_addr;
+    default "";
+}
+
+limit_req_zone $binary_remote_addr zone=api_read:10m  rate=5r/s;
+limit_req_zone $write_limit_key    zone=api_write:10m rate=10r/m;
+limit_req_status 429;
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # PDF uploads go through this proxy; nginx defaults to 1m, which silently
+    # 413s most papers.
+    client_max_body_size 32m;
+
+    location /api/ {
+        limit_req zone=api_read  burst=20 nodelay;
+        limit_req zone=api_write burst=5  nodelay;
+
+        proxy_pass http://backend:8000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # The SPA is a static bundle with nowhere safe to keep a secret, so the
+        # bearer token is attached here instead of in the browser. It never
+        # reaches the client and rotates with a restart, no rebuild. Note this
+        # makes the API usable by anyone who can reach this proxy -- the price
+        # of a demo judges can click through without being handed a credential.
+        # Any Authorization header the client sends is replaced, not merged.
+        proxy_set_header Authorization "Bearer ${APP_API_TOKEN}";
+
+        # keep long-lived requests (e.g. future SSE streaming) open
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(?:js|css|svg|png|jpg|jpeg|gif|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, immutable";
+    }
+}
