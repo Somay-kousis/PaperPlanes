@@ -36,7 +36,7 @@
 
 ---
 
-## Proof, not adjectives
+## Proof
 
 Every claim below is reproduced by a script or test in this repo — not asserted.
 
@@ -372,18 +372,8 @@ backend/            FastAPI + LangGraph — app/memory (engine), app/core (graph
                     app/api (routes), app/scripts (init_db, seeds, benchmarks), tests/{unit,integration,eval}
 frontend/           React 19 + Vite (Swiss Brutalist UI) — Landing, Chat, Library,
                     Memory Inspector (timeline/diff/graph/time-travel), Contradictions
-docs/               ARCHITECTURE · PRODUCTION (ECS path) · SECURITY (least-privilege IAM + API auth) · HACKATHON
 docker-compose.yml  single-node CockroachDB v25.2 + backend + frontend
 ```
-
-
-## Docs
-
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — **start here** to learn the repo: which papers to read, the tech stack, and a follow-the-data reading order through the code
-- `docs/ARCHITECTURE.md` — memory engine design
-- `docs/PRODUCTION.md` — productionization path (ECS Fargate)
-- `docs/SECURITY.md` — least-privilege IAM, secrets handling, API auth
-- `docs/HACKATHON.md` — tool-usage write-up
 
 ## License
 
