@@ -21,5 +21,5 @@
 
 ## Links
 
-- Demo: _TBD_
-- Video: _TBD_
+- Demo: https://paperplanes.duckdns.org
+- Video: https://drive.google.com/file/d/1DRuzelEhbNQoxyCwL0-XKkIReTnLuXte/view?usp=share_link
