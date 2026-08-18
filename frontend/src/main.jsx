@@ -18,7 +18,8 @@ createRoot(document.getElementById("root")).render(
           <Route index element={<LandingPage />} />
           <Route path="library" element={<LibraryPage />} />
           <Route path="chat" element={<ChatPage />} />
-          <Route path="memory" style={{}} element={<MemoryInspectorPage />} />
+          <Route path="chat/:sessionId" element={<ChatPage />} />
+          <Route path="memory" element={<MemoryInspectorPage />} />
           <Route path="contradictions" element={<ContradictionsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
