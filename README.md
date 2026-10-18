@@ -15,6 +15,8 @@
   <img src="https://img.shields.io/badge/LangGraph-Stateful%20Agents-orange.svg" alt="LangGraph" />
   <img src="https://img.shields.io/badge/CockroachDB-VECTOR%20%2B%20MCP%20%2B%20Bi--temporal-6933FF.svg" alt="CockroachDB" />
   <img src="https://img.shields.io/badge/AWS-Bedrock%20Nova%20%2B%20Titan%20%2B%20S3-FF9900.svg" alt="AWS" />
+  <img src="https://img.shields.io/badge/FastAPI-backend-009688.svg" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-frontend-61DAFB.svg" alt="React" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" />
 </p>
 
@@ -92,7 +94,6 @@ Two compiled LangGraph pipelines drive everything. Both **self-degrade** node-by
 The user only ever waits on `agent`. Everything after it (`write_episodes → extract_facts → memory_write`) records the turn and consolidates new facts *after* the reply is already produced.
 
 ```mermaid
-%%{init: {'theme':'dark','themeVariables':{'background':'#0b0f19','primaryColor':'#1e293b','primaryTextColor':'#f8fafc','lineColor':'#38bdf8','nodeBorder':'#334155'}}}%%
 flowchart LR
     Start([Start]) --> LC["load_context<br/>(session + user)"]
     LC --> RET["retrieve<br/>(ANN + Ebbinghaus rescore<br/>+ reinforce strength)"]
@@ -102,11 +103,6 @@ flowchart LR
     WE --> EF["extract_facts<br/>(Nova)"]
     EF --> MW["memory_write<br/>(Mem0 consolidate)"]
     MW --> End([End])
-
-    classDef n fill:#161b33,stroke:#4f46e5,stroke-width:1.5px,color:#c7d2fe;
-    classDef se fill:#0f2c22,stroke:#10b981,stroke-width:1.5px,color:#34d399;
-    class LC,RET,AC,AG,WE,EF,MW n;
-    class Start,End se;
 ```
 
 ### 2. Ingestion Graph — PDF → claims → contradictions
@@ -114,7 +110,6 @@ flowchart LR
 Every pre-storage step routes through a `continue / fail` guard that short-circuits to `mark_ready` (writing `status='failed'`). The extraction trio self-degrades instead, so a paper always reaches a terminal state.
 
 ```mermaid
-%%{init: {'theme':'dark','themeVariables':{'background':'#0b0f19','primaryColor':'#1e293b','primaryTextColor':'#f8fafc','lineColor':'#a78bfa','nodeBorder':'#334155'}}}%%
 flowchart TD
     S([Start]) --> F["fetch (S3 / arXiv)"]
     F -->|continue| P["parse (PyMuPDF4LLM)"]
@@ -131,11 +126,6 @@ flowchart TD
     P -.->|fail| MR
     CH -.->|fail| MR
     EM -.->|fail| MR
-
-    classDef n fill:#241442,stroke:#8b5cf6,stroke-width:1.5px,color:#ddd6fe;
-    classDef se fill:#0f2c22,stroke:#10b981,stroke-width:1.5px,color:#34d399;
-    class F,P,CH,EM,SC,EE,ECl,CC,MR n;
-    class S,E se;
 ```
 
 ### 3. Mem0 Write Path — the decision that makes memory ≠ append-log
@@ -143,7 +133,6 @@ flowchart TD
 For each candidate fact: embed, ANN-search similar active notes, and if anything is close enough, ask Nova to choose exactly one of four branches. The decision always happens *before* any row mutation — no transaction is held open across an LLM call.
 
 ```mermaid
-%%{init: {'theme':'dark','themeVariables':{'background':'#0b0f19','primaryColor':'#1e293b','primaryTextColor':'#f8fafc','lineColor':'#10b981','nodeBorder':'#334155'}}}%%
 flowchart TD
     C["candidate fact"] --> EMB["embed + ANN search<br/>similar ACTIVE notes"]
     EMB --> Q{"best similarity<br/>≥ 0.60 ?"}
@@ -158,11 +147,6 @@ flowchart TD
     UPD --> AUD
     INV --> AUD
     NOP --> AUD
-
-    classDef n fill:#161b33,stroke:#4f46e5,stroke-width:1.5px,color:#c7d2fe;
-    classDef d fill:#3c200c,stroke:#f59e0b,stroke-width:1.5px,color:#fde047;
-    class C,EMB,ADD,UPD,INV,NOP,AUD n;
-    class Q,DEC d;
 ```
 
 ---
